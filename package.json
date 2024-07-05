@@ -1,0 +1,40 @@
+{
+  "name": "nodeify",
+  "version": "0.0.3",
+  "description": "",
+  "nodemonConfig": {
+    "ignore": [
+      "**/test/**",
+      "**/docs/**,",
+      "*./client*.js"
+    ]
+  },
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "nodemon ./server.js",
+    "drop": "rm ./database/messages.db.bak"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ansi-colors": "^4.1.3",
+    "argon2": "^0.40.3",
+    "better-sqlite3": "^10.0.0",
+    "better-sqlite3-session-store": "^0.1.0",
+    "commander": "^12.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-handlebars": "^7.1.2",
+    "express-session": "^1.18.0",
+    "handlebars": "^4.7.8",
+    "helper-date": "^1.0.1",
+    "moment": "^2.30.1",
+    "nanoid": "^5.0.7",
+    "pretty-bytes": "^6.1.1",
+    "uuidv7": "^0.6.3",
+    "validator": "^13.12.0",
+    "ws": "^8.16.0"
+  }
+}

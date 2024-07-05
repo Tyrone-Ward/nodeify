@@ -1,0 +1,98 @@
+<p>
+    <div>kksdfdfj</div>
+</p>
+<div class="container mt-4">
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+            Add Client
+        </button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <form action="/client/add" method="POST">
+                    <label for="exampleFormControlInput1" class="form-label">Client name</label>
+                    <input type="text" class="form-control" name="clientName" id="exampleFormControlInput1" placeholder="unique identifier">
+                    {{!-- <button type="submit" class="btn btn-primary">Submit</button> --}}
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+        </div>
+    </div>
+    </div>
+
+    <br>
+
+    <!-- Modal -->
+    <table class="table table-hover">
+    <thead class="table-dark">
+        <tr>
+        <th scope="col">#</th>
+        <th scope="col">Name</th>
+        <th scope="col">Token</th>
+        <th scope="col">Description</th>
+        <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody class="table-group-divider">
+    {{#each users as |value key|}}
+        <tr>
+            <td>{{math @index "+" 1}}</td>
+            <td>{{value.name}}</td>
+            <td>{{value.clientToken}}</td>
+            <td></td>
+            <td>
+                <div class="container text-center">
+                    <div class="row">
+                        <div class="col-2" onclick="showQr()">
+                        <i class="icon-qrcode"></i> 
+                        </div>
+                        <div class="col-2" onclick="editClient()">
+                        <i class="icon-pencil"></i>
+                        </div>
+                        <div class="col-2" onclick="deleteClient(`{{value.clientToken}}`)">
+                        <i class="icon-trash"></i>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    {{/each}}
+    </tbody>
+    </table>
+
+    {{!-- <button type="button" class="btn btn-primary" id="liveToastBtn">Show live toast</button> --}}
+    <script>
+        async function deleteClient(id) {
+            if (confirm(`delete ${id}`) == true) {
+            console.log(`Deleting ${id}`)
+            fetch("/client/remove", {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ clientToken: id  }), 
+            })
+            await window.location.reload();
+            } else {
+            console.log(`cancelled`)
+            }
+        }
+        function editClient() {
+        alert("edit client");
+        }
+        function showQr() {
+        alert("show QR Code");
+        }
+    </script>
+</div>
