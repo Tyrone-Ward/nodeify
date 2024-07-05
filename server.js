@@ -104,7 +104,7 @@ try {
 }
 
 const app = express()
-const PORT = process.env.PORT || 80
+const PORT = process.env.NODE_ENV === 'development' ? 8080 : 80
 
 app.engine(
   'handlebars',
@@ -405,5 +405,6 @@ const localIp = Object.values(networkInterfaces())
 
 expressServer.listen(PORT, () => {
   const appName = info.name.charAt(0).toUpperCase() + info.name.slice(1)
-  console.log(`${appName} server listening at http://localhost:${PORT}`)
+  const ipAddr = process.env.NODE_ENV === 'development' ? 'localhost' : localIp
+  console.log(`${appName} server listening at http://${ipAddr}:${PORT}`)
 })

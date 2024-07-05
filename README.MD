@@ -1,6 +1,6 @@
 <p align="center">
     <a href="https://github.com/gotify/logo">
-        <img height="370px" src="./output (1).jpg" />
+        <img height="370px" src="./mascot.jpg" />
     </a>
 </p>
 
