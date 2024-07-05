@@ -45,7 +45,7 @@ COMING SOON
 
 ## Issues
 
-I know this project isn't perfect, but this is my first complete project. I will continue to update this project and contine improve it (mainly because I intend to use it).
+I know this project isn't perfect, but this is my first complete project. I will continue to update this project and continue to improve it (mainly because I intend to use it).
 
 ## Acknowledgements
 
