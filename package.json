@@ -13,7 +13,7 @@
   "type": "module",
   "scripts": {
     "start": "nodemon ./server.js",
-    "drop": "rm ./database/messages.db.bak"
+    "drop": "rm ./database/nodeify.db"
   },
   "keywords": [],
   "author": "",

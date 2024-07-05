@@ -53,4 +53,4 @@ This project was **heavily** inspired by [Gotify](https://github.com/gotify/serv
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
