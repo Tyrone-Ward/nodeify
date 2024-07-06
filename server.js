@@ -13,10 +13,8 @@ import fs from 'node:fs'
 // TODO: Populate .readme
 // TODO: Tests!
 /*
-TODO: Create a self-signed(?) cert for https and wss.
-https://stackoverflow.com/questions/11744975/enabling-https-on-express-js
-or
-https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-apache-in-ubuntu-16-04
+TODO: Create a signed cert for https and wss.
+https://itnext.io/node-express-letsencrypt-generate-a-free-ssl-certificate-and-run-an-https-server-in-5-minutes-a730fbe528ca
 */
 // import { createServer } from https
 import { createServer } from 'http'
