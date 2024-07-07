@@ -7,7 +7,7 @@
         {{#each messages as | message |}}
         <div class="card">
             <div class="card-body">
-                Message: {{message.message}} | Sent: {{relativeDate message.date}} | From: {{#with (lookup ../clientObject [sender])~}} {{name}} | Delivered: {{message.delivered}}</i>
+                Message: {{{createLink message.message}}} | Sent: {{relativeDate message.date}} | From: {{#with (lookup ../clientObject [sender])~}} {{name}} | Delivered: {{message.delivered}}</i>
                 {{/with}}
             </div>
         </div>

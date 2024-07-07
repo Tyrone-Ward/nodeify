@@ -1,22 +1,10 @@
 #!/usr/bin/node
 
-console.clear()
-
-import dotenv from 'dotenv'
+import 'dotenv/config'
 import express from 'express'
 import info from './package.json' assert { type: 'json' }
-// console.log(info.version)
 import { networkInterfaces } from 'node:os'
 import fs from 'node:fs'
-// DONE: Use sessions
-// TODO: Setup MVC folder structure
-// TODO: Populate .readme
-// TODO: Tests!
-/*
-TODO: Create a signed cert for https and wss.
-https://itnext.io/node-express-letsencrypt-generate-a-free-ssl-certificate-and-run-an-https-server-in-5-minutes-a730fbe528ca
-*/
-// import { createServer } from https
 import { createServer } from 'http'
 import WebSocket, { WebSocketServer } from 'ws'
 import { uuidv7 } from 'uuidv7'
@@ -31,14 +19,17 @@ import sqlite3_session_store from 'better-sqlite3-session-store'
 import { randomBytes } from 'node:crypto'
 import moment from 'moment'
 import { uptime } from 'node:process'
-
-dotenv.config()
+// TODO: Setup MVC folder structure
+// TODO: Tests!
+/*
+TODO: Create a signed cert for https and wss.
+https://itnext.io/node-express-letsencrypt-generate-a-free-ssl-certificate-and-run-an-https-server-in-5-minutes-a730fbe528ca
+*/
+// import { createServer } from https
 
 const db = new Database('./database/messages.db')
 const SqliteStore = sqlite3_session_store(session)
 
-// DONE: Switch to better-sqlite3
-// https://www.npmjs.com/package/better-sqlite3
 const sql = 'INSERT INTO messages( _id, message, recipient, sender, date, delivered) VALUES (?, ?, ?, ?, ?, ?)'
 const clientTokenAddSql = 'INSERT INTO clientTokens(clientToken, name) VALUES (?, ?)'
 const clientTokenRemoveSql = 'DELETE FROM clientTokens WHERE clientToken = (?)'
@@ -54,6 +45,7 @@ const queryUserSql = 'SELECT * FROM users WHERE email=(?)'
 // Create tables. Silently pass if it already exist
 // TODO: Move to first run process in /scripts
 // https://stackoverflow.com/questions/11744975/enabling-https-on-express-js#:~:text=17-,Including%20Points%3A,-SSL%20setup
+
 try {
   db.prepare(
     `CREATE TABLE messages(
@@ -122,6 +114,12 @@ app.engine(
       },
       relativeDate: function (dateTime) {
         return moment(dateTime, 'MMMM Do YYYY, h:mm:ss a').fromNow()
+      },
+      createLink: function (text) {
+        if (text.slice(0, 4) === 'http') {
+          return `<a href="${text}"> ${text}</a>`
+        }
+        return text
       }
     }
   })
