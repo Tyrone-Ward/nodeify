@@ -1,13 +1,13 @@
 <div class="container mt-4">
     <div class="mt-4 p-5 rounded">
             <script>
-                console.log(moment().format('MMMM Do YYYY, h:mm:ss a'))
+                console.log('')
             </script>
     {{#if listExists}}
         {{#each messages as | message |}}
         <div class="card">
             <div class="card-body">
-                Message: {{{createLink message.message}}} | Sent: {{relativeDate message.date}} | From: {{#with (lookup ../clientObject [sender])~}} {{name}} | Delivered: {{message.delivered}}</i>
+                Message: {{{link message.message}}} | Sent: {{relativeDate message.date}} | From: {{#with (lookup ../clientObject [sender])~}} {{name}} | Delivered: {{message.delivered}}</i>
                 {{/with}}
             </div>
         </div>

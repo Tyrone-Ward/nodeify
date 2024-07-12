@@ -113,9 +113,9 @@ app.engine(
         }[operator]
       },
       relativeDate: function (dateTime) {
-        return moment(dateTime, 'MMMM Do YYYY, h:mm:ss a').fromNow()
+        return moment(dateTime, 'YYYY-MM-DDTHH:mm:ss').fromNow()
       },
-      createLink: function (text) {
+      link: function (text) {
         if (text.slice(0, 4) === 'http') {
           return `<a href="${text}"> ${text}</a>`
         }
@@ -364,7 +364,7 @@ server.on('connection', (socket, req) => {
       parsedMessage.message = p.message
       parsedMessage.recipient = p.recipient
       parsedMessage.sender = socket.id // db.prepare(decodedClientIdSql).get(socket.id).name || 'unknown'
-      parsedMessage.date = moment().format('MMMM Do YYYY, h:mm:ss a')
+      parsedMessage.date = moment().format()
       parsedMessage.delivered = null
       console.log(connectedClients)
 
