@@ -120,6 +120,13 @@ app.engine(
           return `<a href="${text}"> ${text}</a>`
         }
         return text
+      },
+      deliveredStatus: function (messageDeliveredStatus) {
+        if (messageDeliveredStatus === 0) {
+          return 'Not delivered'
+        } else {
+          return 'Delivered'
+        }
       }
     }
   })
