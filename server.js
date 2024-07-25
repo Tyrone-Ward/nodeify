@@ -19,12 +19,12 @@ import sqlite3_session_store from 'better-sqlite3-session-store'
 import { randomBytes } from 'node:crypto'
 import moment from 'moment'
 import { uptime } from 'node:process'
+import logger from './src/middlewares/logger.js'
+// import { privateKey } from './src/config/index.js'
+
 // TODO: Setup MVC folder structure
 // TODO: Tests!
-/*
-TODO: Create a signed cert for https and wss.
-https://itnext.io/node-express-letsencrypt-generate-a-free-ssl-certificate-and-run-an-https-server-in-5-minutes-a730fbe528ca
-*/
+// TODO: Generate a signed cert for https and wss.
 // import { createServer } from https
 
 const db = new Database('./database/messages.db')
@@ -37,7 +37,6 @@ const clientTokenRetrievalSql = 'SELECT * FROM clientTokens WHERE clientToken = 
 const allClientTokenRetrievalSql = 'SELECT * FROM clientTokens'
 const getAllMessagesSql = 'SELECT * FROM messages ORDER BY date DESC'
 const undeliveredMessagesSql = 'SELECT * FROM messages WHERE recipient IS (?) AND delivered IS 0'
-const decodedClientIdSql = 'SELECT name FROM clientTokens WHERE clientToken IS (?)'
 const updateDeliveredStatusSql = 'UPDATE messages SET delivered = 1 WHERE _id = (?)'
 const createUserSql = 'INSERT INTO users(email, name, password) VALUES (?, ?, ?)'
 const queryUserSql = 'SELECT * FROM users WHERE email=(?)'
@@ -132,7 +131,7 @@ app.engine(
   })
 )
 app.set('view engine', 'handlebars')
-app.set('views', './views')
+app.set('views', './src/views')
 
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
@@ -156,17 +155,7 @@ app.use(
   })
 )
 
-// What even is this? A terrible logger
-app.use((req, res, next) => {
-  res.on('finish', () => {
-    const statusCode =
-      res.statusCode >= 200 && res.statusCode <= 400
-        ? c.white.bgGreen(res.statusCode.toString().padStart(4, ' ').padEnd(5, ' '))
-        : c.white.bgRed(res.statusCode.toString().padStart(4, ' ').padEnd(5, ' '))
-    console.log(`${moment().format()} |${statusCode}| ${req.ip.padStart(17, ' ').padEnd(23, ' ')} |${c.white.bgBlue(req.method.padStart(7, ' ').padEnd(11, ' '))}| ${req.originalUrl}`)
-  })
-  next()
-})
+app.use(logger())
 
 const hashPassword = async (password) => {
   try {
@@ -194,7 +183,6 @@ const authCheck = (req, res, next) => {
     res.status(401)
     res.send('You are not authorized. <a href="/login">Login</a>')
     return
-    // res.redirect('/login')
   }
   next()
 }
@@ -282,7 +270,6 @@ app.post('/client/remove', (req, res) => {
 app.post('/register', async (req, res) => {
   // DONE: Add user to users table
   // TODO: Validate input?
-  // console.log(`username: ${req.body.name}, password: ${req.body.password}, email: ${req.body.email}`)
   const { name, email, password } = req.body
   const hashedPassword = await hashPassword(password)
   db.prepare(createUserSql).run(email, name, hashedPassword)
@@ -327,7 +314,7 @@ app.use(express.static('public'))
 const expressServer = createServer(app)
 const server = new WebSocketServer({ server: expressServer })
 
-// shut down server gracefully
+// shut down server "gracefully"
 process.on('SIGINT', () => {
   server.close(() => console.log('Shut down server.'))
   db.close(() => console.log('Closed database.'))
@@ -339,9 +326,15 @@ const connectedClients = new Set()
 
 server.on('connection', (socket, req) => {
   socket.id = req.url.slice(1)
+  const rows = db.prepare(clientTokenRetrievalSql).get(socket.id)
+  if (rows === undefined) {
+    socket.send(JSON.stringify({ error: 'incorrect credentials' }))
+    socket.close()
+    return console.log(`${socket.id} denied. Invalid credentials.`)
+  }
   connectedClients.add(socket.id)
-  // TODO: Create a proper logger
-  console.log(`${moment().format()} | ${200} | ${req.socket.remoteAddress.padStart(17, ' ').padEnd(23, ' ')} | ${'GET'.padStart(6, ' ').padEnd(9, ' ')} | ${socket.id}`)
+
+  // DONE: Create a proper logger
 
   // DONE: Check to see if there are any queued up messages. If so, send them to the client.
   server.clients.forEach(async (client) => {
@@ -370,7 +363,7 @@ server.on('connection', (socket, req) => {
       // parsedMessage.title = p.title
       parsedMessage.message = p.message
       parsedMessage.recipient = p.recipient
-      parsedMessage.sender = socket.id // db.prepare(decodedClientIdSql).get(socket.id).name || 'unknown'
+      parsedMessage.sender = socket.id
       parsedMessage.date = moment().format()
       parsedMessage.delivered = null
       console.log(connectedClients)
