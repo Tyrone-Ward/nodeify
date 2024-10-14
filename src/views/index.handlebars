@@ -7,8 +7,7 @@
         {{#each messages as | message |}}
         <div class="card">
             <div class="card-body">
-                Message: {{{link message.message}}} | Sent: {{relativeDate message.date}} | From: {{#with (lookup ../clientObject [sender])~}} {{name}} | Status: {{deliveredStatus message.delivered}}</i>
-                {{/with}}
+                Message: {{{link message.message}}} | Sent: {{relativeDate message.date}} | From: {{message.sender}} | Status: {{deliveredStatus message.delivered}}</i>
             </div>
         </div>
         <br>

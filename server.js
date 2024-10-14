@@ -4,28 +4,24 @@ import 'dotenv/config'
 import express from 'express'
 import info from './package.json' assert { type: 'json' }
 import { networkInterfaces } from 'node:os'
-import fs from 'node:fs'
-import { createServer } from 'http'
 import WebSocket, { WebSocketServer } from 'ws'
 import { uuidv7 } from 'uuidv7'
-import c from 'ansi-colors'
 import { nanoid } from 'nanoid'
 import { engine } from 'express-handlebars'
-import prettyBytes from 'pretty-bytes'
 import Database from 'better-sqlite3'
 import * as argon2 from 'argon2'
 import session from 'express-session'
 import sqlite3_session_store from 'better-sqlite3-session-store'
 import { randomBytes } from 'node:crypto'
 import moment from 'moment'
-import { uptime } from 'node:process'
-import logger from './src/middlewares/logger.js'
-// import { privateKey } from './src/config/index.js'
+import logger from './src/utils/logger.js'
+import morganMiddleware from './src/middlewares/httpLpgger.js'
+import { app, expressServer, PORT } from './src/config/index.js'
+import rootRouter from './src/routes/rootRoutes.js.js'
 
 // TODO: Setup MVC folder structure
 // TODO: Tests!
 // TODO: Generate a signed cert for https and wss.
-// import { createServer } from https
 
 const db = new Database('./database/messages.db')
 const SqliteStore = sqlite3_session_store(session)
@@ -40,6 +36,7 @@ const undeliveredMessagesSql = 'SELECT * FROM messages WHERE recipient IS (?) AN
 const updateDeliveredStatusSql = 'UPDATE messages SET delivered = 1 WHERE _id = (?)'
 const createUserSql = 'INSERT INTO users(email, name, password) VALUES (?, ?, ?)'
 const queryUserSql = 'SELECT * FROM users WHERE email=(?)'
+const clientTokenFromName = 'SELECT name FROM clientTokens WHERE clientToken is (?)'
 
 // Create tables. Silently pass if it already exist
 // TODO: Move to first run process in /scripts
@@ -56,10 +53,10 @@ try {
         delivered int
       )`
   ).run()
-  console.log('Created messages table.')
+  logger.info('Created messages table.')
 } catch (err) {
   if (err.message === 'table messages already exists') {
-    console.log('Table messages already exists')
+    logger.warn('Table messages already exists')
   }
 }
 
@@ -70,10 +67,10 @@ try {
       name TEXT NOT NULL UNIQUE
     )`
   ).run()
-  console.log('Created clientTokens table.')
+  logger.info('Created clientTokens table.')
 } catch (err) {
   if (err.message === 'table clientTokens already exists') {
-    console.log('Table clientTokens already exists')
+    logger.warn('Table clientTokens already exists')
   }
 }
 
@@ -85,15 +82,15 @@ try {
       password text
     )`
   ).run()
-  console.log('Created users table.')
+  logger.info('Created users table.')
 } catch (err) {
   if (err.message === 'table users already exists') {
-    console.log('Table users already exists')
+    logger.warn('Table users already exists')
   }
 }
 
-const app = express()
-const PORT = process.env.NODE_ENV === 'development' ? 8080 : 80
+// const app = express()
+// const PORT = process.env.NODE_ENV === 'development' ? 8080 : 80
 
 app.engine(
   'handlebars',
@@ -155,14 +152,14 @@ app.use(
   })
 )
 
-app.use(logger())
+app.use(morganMiddleware)
 
 const hashPassword = async (password) => {
   try {
     const salt = randomBytes(32)
     return await argon2.hash(password, salt)
   } catch (e) {
-    console.log('Error hashing password with argon2', e)
+    logger.error('Error hashing password with argon2', e)
   }
 }
 
@@ -174,7 +171,7 @@ const comparePassword = async (password, hashedPassword) => {
     }
     return false
   } catch (e) {
-    console.log('Error argon2 verification', e)
+    logger.error('Error argon2 verification', e)
   }
 }
 
@@ -193,14 +190,10 @@ app.use((req, res, next) => {
   next()
 })
 // Routes
-app.get('/', authCheck, async (req, res) => {
-  const rows = db.prepare(getAllMessagesSql).all()
-  const clientObject = {}
-  const clientList = db.prepare('SELECT * FROM clientTokens').all()
-  clientList.forEach((c) => (clientObject[c.clientToken] = { name: c.name }))
+// TODO: Decouple UI from api
 
-  res.render('index', { messageCount: rows.length, messages: rows, listExists: true, userId: req.session.user.user_id, clientObject })
-})
+app.use('/', rootRouter)
+
 app.get('/register', (req, res) => {
   res.render('register')
 })
@@ -211,7 +204,7 @@ app.get('/clients', authCheck, (req, res) => {
 app.get('/login', (req, res) => {
   const users = db.prepare('SELECT * FROM users').all()
   if (users.length === 0) {
-    console.log('no users')
+    logger.info('no users')
     return res.redirect('/register')
   }
   res.locals.noHeader = true
@@ -219,8 +212,8 @@ app.get('/login', (req, res) => {
 })
 app.post('/login', async (req, res) => {
   const { email, password } = req.body
+  logger.info(`email: ${email}`)
   const rows = await db.prepare(queryUserSql).get(email)
-  console.log('email:', email)
 
   if (!rows) {
     res.status(422)
@@ -239,7 +232,6 @@ app.post('/login', async (req, res) => {
     // to prevent fixation
     req.session.regenerate(() => {
       req.session.isLoggedIn = true
-      // we can also store additional user data
       req.session.user = { user_id: rows.email }
       res.redirect('/')
     })
@@ -252,19 +244,16 @@ app.get('/logout', (req, res) => {
     res.redirect('/login')
   })
 })
-app.get('/test', (req, res) => {
-  res.render('clients')
-})
 app.post('/client/add', async (req, res) => {
   const clientTokenData = [nanoid(10), req.body.clientName]
   db.prepare(clientTokenAddSql).run(clientTokenData)
-  console.log('Row inserted.')
+  logger.info('Row inserted.')
   res.redirect('/clients')
 })
 app.post('/client/remove', (req, res) => {
   const clientTokenData = req.body.clientToken
   db.prepare(clientTokenRemoveSql).run(clientTokenData)
-  console.log('Row removed.')
+  logger.info('Row removed.')
   res.redirect('/clients')
 })
 app.post('/register', async (req, res) => {
@@ -274,17 +263,6 @@ app.post('/register', async (req, res) => {
   const hashedPassword = await hashPassword(password)
   db.prepare(createUserSql).run(email, name, hashedPassword)
   res.redirect('/login')
-})
-app.get('/health', (req, res) => {
-  const dbSize = prettyBytes(fs.statSync('./database/messages.db').size)
-
-  res.status(200)
-  res.json({
-    database: 'green',
-    databaseSize: dbSize,
-    health: 'green',
-    uptime: `${Math.floor(uptime())} seconds`
-  })
 })
 app.post('/message', async (req, res) => {
   const rows = db.prepare(clientTokenRetrievalSql).get(req.body.clientId)
@@ -301,7 +279,7 @@ app.post('/message', async (req, res) => {
     ws.onopen = async () => {
       // connection opened
       ws.send(JSON.stringify({ message: req.body.message, recipient: req.body.recipient, clientId: req.body.clientId }))
-      console.log(`message: ${req.body.message} sent to ${req.body.recipient}`)
+      logger.info(`message: ${req.body.message} sent to ${req.body.recipient}`)
       // Terminate connection after sending message
       await ws.terminate()
     }
@@ -311,13 +289,13 @@ app.post('/message', async (req, res) => {
 
 app.use(express.static('public'))
 
-const expressServer = createServer(app)
+// const expressServer = process.env.NODE_ENV === 'production' ? https.createServer(app) : http.createServer(app)
 const server = new WebSocketServer({ server: expressServer })
 
 // shut down server "gracefully"
 process.on('SIGINT', () => {
-  server.close(() => console.log('Shut down server.'))
-  db.close(() => console.log('Closed database.'))
+  server.close(() => logger.info('Shutting down server.'))
+  db.close(() => logger.info('Closing database.'))
   setTimeout(process.exit, 2000, 1)
 })
 
@@ -330,20 +308,22 @@ server.on('connection', (socket, req) => {
   if (rows === undefined) {
     socket.send(JSON.stringify({ error: 'incorrect credentials' }))
     socket.close()
-    return console.log(`${socket.id} denied. Invalid credentials.`)
+    return logger.info(`${socket.id} denied. Invalid credentials.`)
   }
-  connectedClients.add(socket.id)
+  const clientName = db.prepare(clientTokenFromName).get(socket.id)['name']
+  console.log(clientName)
+  connectedClients.add(clientName)
 
   // DONE: Create a proper logger
 
   // DONE: Check to see if there are any queued up messages. If so, send them to the client.
   server.clients.forEach(async (client) => {
-    if (client.id === socket.id) {
-      const undeliveredMessages = db.prepare(undeliveredMessagesSql).all(socket.id)
+    if (db.prepare(clientTokenFromName).get(client.id)['name'] === clientName) {
+      const undeliveredMessages = db.prepare(undeliveredMessagesSql).all(clientName)
       // probably not to check for undefined
       if (undeliveredMessages) {
         undeliveredMessages.forEach((m) => {
-          socket.send(JSON.stringify({ message: m.message, recipient: socket.id, clientId: m.sender }))
+          socket.send(JSON.stringify({ message: m.message, clientId: m.sender })) //change m.sender to seneder name
           db.prepare(updateDeliveredStatusSql).run(m._id)
         })
       }
@@ -354,44 +334,75 @@ server.on('connection', (socket, req) => {
     const p = JSON.parse(message)
     const rows = db.prepare(clientTokenRetrievalSql).get(p.clientId)
     if (rows === undefined) {
-      return console.log('denied')
+      return logger.warn('denied')
     }
     if (rows !== undefined) {
-      console.log(`${rows.name} is approved and connected.`)
+      logger.info(`${rows.name} is approved and connected.`)
       const parsedMessage = {}
       parsedMessage._id = uuidv7()
       // parsedMessage.title = p.title
       parsedMessage.message = p.message
       parsedMessage.recipient = p.recipient
-      parsedMessage.sender = socket.id
+      parsedMessage.sender = db.prepare(clientTokenFromName).get(socket.id)['name']
       parsedMessage.date = moment().format()
       parsedMessage.delivered = null
-      console.log(connectedClients)
+      logger.info(connectedClients)
 
       // console.log(`message: ${message} from ${socket.id}`)
       if (connectedClients.has(parsedMessage.recipient)) {
         server.clients.forEach(async (client) => {
-          if (parsedMessage.recipient === client.id) {
+          if (parsedMessage.recipient === db.prepare(clientTokenFromName).get(client.id)['name']) {
+            parsedMessage.delivered = true
             client.send(JSON.stringify(parsedMessage))
             parsedMessage.delivered = 1
             db.prepare(sql).run(parsedMessage._id, parsedMessage.message, parsedMessage.recipient, parsedMessage.sender, parsedMessage.date, parsedMessage.delivered)
           }
         })
       } else {
-        console.log(`${parsedMessage.recipient} is not connected. Saving message.`)
+        logger.info(`${parsedMessage.recipient} is not connected. Saving message.`)
         // Update db with message
         parsedMessage.delivered = 0
-        console.log(parsedMessage)
+        logger.info(parsedMessage)
         db.prepare(sql).run(parsedMessage._id, parsedMessage.message, parsedMessage.recipient, parsedMessage.sender, parsedMessage.date, parsedMessage.delivered)
-        console.log('Row inserted.')
+        logger.info('Row inserted.')
       }
     }
   })
 
   socket.on('close', () => {
     connectedClients.delete(socket.id)
-    console.log(`${socket.id} has been disconnected.`)
+    logger.info(`${socket.id} has been disconnected.`)
   })
+})
+
+// TODO: Handle errors better
+
+app.use(function (req, res, next) {
+  res.status(404)
+  logger.error('Not found')
+
+  res.format({
+    html: function () {
+      res.locals.noHeader = true
+      res.render('404', { url: req.url })
+    },
+    json: function () {
+      res.json({ error: 'Not found' })
+    },
+    default: function () {
+      res.type('txt').send('Not found')
+    }
+  })
+})
+
+app.use(function (err, req, res, next) {
+  // we may use properties of the error object
+  // here and next(err) appropriately, or if
+  // we possibly recovered from the error, simply next().
+  res.locals.noHeader = true
+  res.status(err.status || 500)
+  logger.error(err)
+  res.render('500', { error: err })
 })
 
 const localIp = Object.values(networkInterfaces())
@@ -402,5 +413,5 @@ const localIp = Object.values(networkInterfaces())
 expressServer.listen(PORT, () => {
   const appName = info.name.charAt(0).toUpperCase() + info.name.slice(1)
   const ipAddr = process.env.NODE_ENV === 'development' ? 'localhost' : localIp
-  console.log(`${appName} server listening at http://${ipAddr}:${PORT}`)
+  logger.info(`${appName} server listening at http://${ipAddr}:${PORT}`)
 })
