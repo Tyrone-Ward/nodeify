@@ -5,6 +5,7 @@ import express from 'express'
 import info from './package.json' assert { type: 'json' }
 import { networkInterfaces } from 'node:os'
 import WebSocket, { WebSocketServer } from 'ws'
+import cors from 'cors'
 import { uuidv7 } from 'uuidv7'
 import { nanoid } from 'nanoid'
 import { engine } from 'express-handlebars'
@@ -132,6 +133,7 @@ app.set('views', './src/views')
 
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
+app.use(cors())
 
 // Sessions!
 app.use(
@@ -184,7 +186,7 @@ const authCheck = (req, res, next) => {
   next()
 }
 app.use((req, res, next) => {
-  // Make `app name` and `version` available in templatesS
+  // Make `app name` and `version` available in templates
   res.locals.appName = info.name.charAt(0).toUpperCase() + info.name.slice(1)
   res.locals.version = info.version
   next()
@@ -323,7 +325,7 @@ server.on('connection', (socket, req) => {
       // probably not to check for undefined
       if (undeliveredMessages) {
         undeliveredMessages.forEach((m) => {
-          socket.send(JSON.stringify({ message: m.message, clientId: m.sender })) //change m.sender to seneder name
+          socket.send(JSON.stringify({ message: m.message, sender: m.sender, sent: m.date })) //change m.sender to seneder name
           db.prepare(updateDeliveredStatusSql).run(m._id)
         })
       }
@@ -352,10 +354,10 @@ server.on('connection', (socket, req) => {
       if (connectedClients.has(parsedMessage.recipient)) {
         server.clients.forEach(async (client) => {
           if (parsedMessage.recipient === db.prepare(clientTokenFromName).get(client.id)['name']) {
-            parsedMessage.delivered = true
-            client.send(JSON.stringify(parsedMessage))
             parsedMessage.delivered = 1
             db.prepare(sql).run(parsedMessage._id, parsedMessage.message, parsedMessage.recipient, parsedMessage.sender, parsedMessage.date, parsedMessage.delivered)
+            delete parsedMessage.recipient
+            client.send(JSON.stringify(parsedMessage))
           }
         })
       } else {
@@ -370,7 +372,7 @@ server.on('connection', (socket, req) => {
   })
 
   socket.on('close', () => {
-    connectedClients.delete(socket.id)
+    connectedClients.delete(clientName)
     logger.info(`${socket.id} has been disconnected.`)
   })
 })

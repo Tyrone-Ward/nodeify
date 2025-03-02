@@ -5,8 +5,8 @@ import http from 'node:http'
 import https from 'https'
 
 const keyDir = `/etc/letsencrypt/live/${process.env.siteURL}`
+const dbName = process.env.Database_Name
 
-// will 'production' always use certs?
 if (process.env.NODE_ENV === 'production') {
   const credentials = {
     key: readFileSync(`${keyDir}/privkey.pem`, 'utf8'),
