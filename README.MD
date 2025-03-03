@@ -21,12 +21,6 @@ Extremely minimal server for sending and receiving messages (in real time via We
 - CLI for sending messages -> [nodeify/cli](https://github.com/tyrone-ward/nodeifycli)
 - Android/iPhone apps (coming soon)
 
----
-
-**Documentation**
-
-COMING SOON
-
 <!-- [Install](https://nodeify.com/docs/install) ᛫
 [Configuration](https://nodeify.com/docs/config) ᛫
 [REST-API](https://nodeify.com/api-docs) ᛫
@@ -41,7 +35,7 @@ COMING SOON
 - **Handlebars**: A logicless templating language to generate HTML, used for rendering views.
 - **Express-session**: Middleware for handling sessions, which is essential for user authentication and management.
 - **Validator**: A library of string validators and sanitisers, ensuring data integrity and security.
-- **Bootstrap**: A powerful, feature-packed frontend toolkit.
+- ~~**Bootstrap**: A powerful, feature-packed frontend toolkit.~~
 
 ## Issues
 

@@ -219,23 +219,25 @@ app.post('/login', async (req, res) => {
 
   if (!rows) {
     res.status(422)
-    res.json({ error: 'user not found' })
+    return res.json({ error: 'user not found' })
     // res.redirect('/login')
   }
+
+  // Implement flash messages
 
   if (rows) {
     const hashedPassword = rows.password
     const isMatch = await comparePassword(password, hashedPassword)
     if (!isMatch) {
       res.status(422)
-      res.json({ error: 'Please enter correct password.' })
+      return res.json({ error: 'Please enter correct password.' })
     }
     // Regenerate session when signing in
     // to prevent fixation
     req.session.regenerate(() => {
       req.session.isLoggedIn = true
       req.session.user = { user_id: rows.email }
-      res.redirect('/')
+      res.redirect('http://localhost:5173/')
     })
   }
 
@@ -295,10 +297,15 @@ app.use(express.static('public'))
 const server = new WebSocketServer({ server: expressServer })
 
 // shut down server "gracefully"
+let SHUTDOWN = false
+
 process.on('SIGINT', () => {
-  server.close(() => logger.info('Shutting down server.'))
-  db.close(() => logger.info('Closing database.'))
-  setTimeout(process.exit, 2000, 1)
+  if (!SHUTDOWN) {
+    SHUTDOWN = true
+    server.close(() => logger.info('Shutting down server.'))
+    db.close(() => logger.info('Closing database.'))
+    setTimeout(process.exit, 2000, 1)
+  }
 })
 
 // Store a list of unique clients
