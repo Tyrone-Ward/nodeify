@@ -18,6 +18,8 @@ import moment from 'moment'
 import logger from './src/utils/logger.js'
 import morganMiddleware from './src/middlewares/httpLpgger.js'
 import { app, expressServer, PORT } from './src/config/index.js'
+
+// Routes
 import rootRouter from './src/routes/rootRoutes.js.js'
 
 // TODO: Setup MVC folder structure
@@ -135,6 +137,9 @@ app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
 app.use(cors())
 
+// HTTP logger
+app.use(morganMiddleware)
+
 // Sessions!
 app.use(
   session({
@@ -153,8 +158,6 @@ app.use(
     maxAge: 24 * 60 * 60 * 1000
   })
 )
-
-app.use(morganMiddleware)
 
 const hashPassword = async (password) => {
   try {
@@ -237,7 +240,9 @@ app.post('/login', async (req, res) => {
     req.session.regenerate(() => {
       req.session.isLoggedIn = true
       req.session.user = { user_id: rows.email }
-      res.redirect('http://localhost:5173/')
+      res.status(200)
+      res.json({ message: 'user authorized' })
+      // res.redirect('http://localhost:5173/')
     })
   }
 

@@ -9,7 +9,6 @@ const getAllMessagesSql = 'SELECT * FROM messages ORDER BY date DESC'
 const allClientTokenRetrievalSql = 'SELECT * FROM clientTokens'
 
 const root = (req, res) => {
-  // res.render('index', { username: 'gameplace123' })
   const rows = db.prepare(getAllMessagesSql).all()
   const clientObject = {}
   const clientList = db.prepare(allClientTokenRetrievalSql).all()
@@ -24,12 +23,12 @@ const test = (req, res) => {
 
 const health = (req, res) => {
   const dbSize = prettyBytes(statSync('./database/messages.db').size)
+  const dbHealth = db.pragma('integrity_check')[0].integrity_check
 
   res.status(200)
   res.json({
-    database: 'green',
+    databaseHealth: dbHealth,
     databaseSize: dbSize,
-    health: 'green',
     uptime: `${Math.floor(uptime())} seconds`
   })
 }
