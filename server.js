@@ -18,9 +18,11 @@ import moment from 'moment'
 import logger from './src/utils/logger.js'
 import morganMiddleware from './src/middlewares/httpLpgger.js'
 import { app, expressServer, PORT } from './src/config/index.js'
+import { clerkMiddleware } from '@clerk/express'
 
 // Routes
 import rootRouter from './src/routes/rootRoutes.js.js'
+import apiRouter from './src/routes/apiRoutes.js'
 
 // TODO: Setup MVC folder structure
 // TODO: Tests!
@@ -92,9 +94,6 @@ try {
   }
 }
 
-// const app = express()
-// const PORT = process.env.NODE_ENV === 'development' ? 8080 : 80
-
 app.engine(
   'handlebars',
   engine({
@@ -133,12 +132,22 @@ app.engine(
 app.set('view engine', 'handlebars')
 app.set('views', './src/views')
 
+// Application-level middleware
+
+app.use(clerkMiddleware())
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
 app.use(cors())
 
 // HTTP logger
 app.use(morganMiddleware)
+
+// Make `app name` and `version` available in templates
+app.use((req, res, next) => {
+  res.locals.appName = info.name.charAt(0).toUpperCase() + info.name.slice(1)
+  res.locals.version = info.version
+  next()
+})
 
 // Sessions!
 app.use(
@@ -188,16 +197,12 @@ const authCheck = (req, res, next) => {
   }
   next()
 }
-app.use((req, res, next) => {
-  // Make `app name` and `version` available in templates
-  res.locals.appName = info.name.charAt(0).toUpperCase() + info.name.slice(1)
-  res.locals.version = info.version
-  next()
-})
-// Routes
+
 // TODO: Decouple UI from api
 
+// Routes
 app.use('/', rootRouter)
+app.use('/api', apiRouter)
 
 app.get('/register', (req, res) => {
   res.render('register')
